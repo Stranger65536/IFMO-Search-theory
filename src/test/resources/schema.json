@@ -1,0 +1,25 @@
+[
+  '{{repeat(1000, 1000)}}',
+  {
+    id: '{{objectId()}}',
+    name: '{{firstName()}}',
+    gender: '{{gender()}}',
+    brand: '{{random("HUGO BOSS", "Diesel", "Lacoste", "Adidas", "Reebok", "Puma", "Nike")}}',
+    description: '{{lorem(1, "paragraphs")}}',
+    sku: [
+      '{{repeat(1, 10)}}',
+      {
+        skuId: '{{objectId()}}',
+        size: '{{random("XS", "S", "M", "L", "XL")}}',
+        color: '{{random("red", "orange", "yellow", "green", "blue", "brown", "black", "white")}}',
+        prices: [
+          '{{repeat(1, 20)}}',
+          {
+            address: '{{state()}}',
+            price: '{{floating(0.01, 10000, 2)}}'
+          }
+        ]
+      }
+    ]
+  }
+]
