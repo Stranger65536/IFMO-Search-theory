@@ -18,6 +18,13 @@ import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.search.join.QueryBitSetProducer;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.lucene.search.join.ToParentBlockJoinQuery;
+import org.apache.lucene.search.spans.SpanContainingQuery;
+import org.apache.lucene.search.spans.SpanNearQuery;
+import org.apache.lucene.search.spans.SpanNotQuery;
+import org.apache.lucene.search.spans.SpanOrQuery;
+import org.apache.lucene.search.spans.SpanPositionRangeQuery;
+import org.apache.lucene.search.spans.SpanQuery;
+import org.apache.lucene.search.spans.SpanTermQuery;
 import org.junit.Test;
 import org.trofiv.labs.search.document.DocumentModel;
 import org.trofiv.labs.search.document.PriceInfoModel;
@@ -73,6 +80,7 @@ public class SimpleQueryTest extends BaseSearchTest {
 
     @Test
     public void testFuzzyQuery() throws ParseException {
+        //searches for terms with the specified similarity level
         final String word = "incididunt";
         final Query query = new QueryParser("description", ANALYZER).parse(word + "~0.7");
         final Set<String> actual = toDocumentIds(indexSearcher.search(query));
@@ -89,6 +97,7 @@ public class SimpleQueryTest extends BaseSearchTest {
 
     @Test
     public void testPrefixQuery() throws ParseException {
+        //makes wildcard prefix
         final String prefix = "incididunt";
         final Query query = new PrefixQuery(new Term("description", prefix));
         final Set<String> actual = toDocumentIds(indexSearcher.search(query));
@@ -106,6 +115,7 @@ public class SimpleQueryTest extends BaseSearchTest {
 
     @Test
     public void testWildcardQuery() throws ParseException {
+        //performs term expansion
         final String word = "incididunt";
         //noinspection MagicCharacter
         final String wildcard = word + '*';
@@ -123,13 +133,144 @@ public class SimpleQueryTest extends BaseSearchTest {
         assertThat(actual, equalTo(expected));
     }
 
-    //todo span position check
-    //todo span or
-    //todo span not
-    //todo span near
-    //todo span first
-    //todo span containing
-    //todo span multi
+    @Test
+    public void testSpanQuery() {
+        //words are located in the specific (or not) order at the specific maximum distance
+        final Query query = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "commodo")),
+                new SpanTermQuery(new Term("description", "nulla"))},
+                2,
+                true);
+        final Set<String> actual = toDocumentIds(indexSearcher.search(query));
+        final Pattern pattern = Pattern.compile(".*commodo\\s+(?<term>[a-zA-Z\\d]+\\s+){0,2}nulla.*");
+        final Pattern filter = Pattern.compile("(?<nonterm>[^a-zA-Z\\d\\s]|[\r\n])+");
+        final Set<String> expected = documentModels.stream()
+                .filter(documentModel -> {
+                    final String prepared = filter.matcher(documentModel.getDescription().toLowerCase(Locale.US))
+                            .replaceAll(" ");
+                    return pattern.matcher(prepared).matches();
+                })
+                .map(DocumentModel::getId)
+                .collect(Collectors.toSet());
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    public void testSpanContainingQuery() {
+        //one span is included into another
+        final SpanNearQuery spanBigQuery = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "commodo")),
+                new SpanTermQuery(new Term("description", "nulla"))},
+                2,
+                true);
+        final SpanNearQuery spanLittleQuery = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "sint")),
+                new SpanTermQuery(new Term("description", "nulla"))},
+                1,
+                true);
+        final Query query = new SpanContainingQuery(spanBigQuery, spanLittleQuery);
+        final Set<String> actual = toDocumentIds(indexSearcher.search(query));
+        final Pattern pattern = Pattern.compile(".*commodo\\s+sint(?<nulla>\\s+nulla){2}.*");
+        final Pattern filter = Pattern.compile("(?<nonterm>[^a-zA-Z\\d\\s]|[\r\n])+");
+        final Set<String> expected = documentModels.stream()
+                .filter(documentModel -> {
+                    final String prepared = filter.matcher(documentModel.getDescription().toLowerCase(Locale.US))
+                            .replaceAll(" ");
+                    return pattern.matcher(prepared).matches();
+                })
+                .map(DocumentModel::getId)
+                .collect(Collectors.toSet());
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    public void testSpanPositionCheckQuery() {
+        //span found at the specific positions range
+        final SpanNearQuery spanQuery = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "commodo")),
+                new SpanTermQuery(new Term("description", "nulla"))},
+                2,
+                true);
+        final Query query = new SpanPositionRangeQuery(spanQuery, 3, 6);
+        final Set<String> actual = toDocumentIds(indexSearcher.search(query));
+        final Pattern pattern = Pattern.compile(".*commodo\\s+(?<term>[a-zA-Z\\d]+\\s+){0,2}nulla.*");
+        final Pattern filter = Pattern.compile("(?<nonterm>[^a-zA-Z\\d\\s]|[\r\n])+");
+        final Set<String> expected = documentModels.stream()
+                .filter(documentModel -> {
+                    final String prepared = filter.matcher(documentModel.getDescription().toLowerCase(Locale.US))
+                            .replaceAll(" ");
+                    if (pattern.matcher(prepared).matches()) {
+                        final List<String> terms = Stream.of(prepared.split(" "))
+                                .filter(s -> !s.isEmpty())
+                                .collect(Collectors.toList());
+                        return terms.size() >= 5 && "commodo".equals(terms.get(3)) && "nulla".equals(terms.get(5));
+                    } else {
+                        return false;
+                    }
+                })
+                .map(DocumentModel::getId)
+                .collect(Collectors.toSet());
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    public void testSpanOrQuery() {
+        //at least one of spans matches
+        final SpanNearQuery firstQuery = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "commodo")),
+                new SpanTermQuery(new Term("description", "nulla"))},
+                2,
+                true);
+        final SpanNearQuery secondQuery = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "tempor")),
+                new SpanTermQuery(new Term("description", "ipsum"))},
+                2,
+                true);
+        final Query query = new SpanOrQuery(firstQuery, secondQuery);
+        final Set<String> actual = toDocumentIds(indexSearcher.search(query));
+        final Pattern firstPattern = Pattern.compile(".*commodo\\s+(?<term>[a-zA-Z\\d]+\\s+){0,2}nulla.*");
+        final Pattern secondPattern = Pattern.compile(".*tempor\\s+(?<term>[a-zA-Z\\d]+\\s+){0,2}ipsum.*");
+        final Pattern filter = Pattern.compile("(?<nonterm>[^a-zA-Z\\d\\s]|[\r\n])+");
+        final Set<String> expected = documentModels.stream()
+                .filter(documentModel -> {
+                    final String prepared = filter.matcher(documentModel.getDescription().toLowerCase(Locale.US))
+                            .replaceAll(" ");
+                    return firstPattern.matcher(prepared).matches() || secondPattern.matcher(prepared).matches();
+                })
+                .map(DocumentModel::getId)
+                .collect(Collectors.toSet());
+        assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    public void testSpanNotQuery() {
+        //Should have no overlappings
+        final SpanNearQuery includeQuery = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "commodo")),
+                new SpanTermQuery(new Term("description", "nulla"))},
+                2,
+                true);
+        final SpanNearQuery excludeQuery = new SpanNearQuery(new SpanQuery[]{
+                new SpanTermQuery(new Term("description", "sint")),
+                new SpanTermQuery(new Term("description", "nulla"))},
+                1,
+                true);
+        final Query query = new SpanNotQuery(includeQuery, excludeQuery);
+        final Set<String> actual = toDocumentIds(indexSearcher.search(query));
+        final Pattern includePattern = Pattern.compile(".*commodo\\s+(?<term>[a-zA-Z\\d]+\\s+){0,2}nulla.*");
+        final Pattern excludePattern = Pattern.compile(".*commodo\\s+sint(?<nulla>\\s+nulla){2}.*");
+        final Pattern filter = Pattern.compile("(?<nonterm>[^a-zA-Z\\d\\s]|[\r\n])+");
+        final Set<String> expected = documentModels.stream()
+                .filter(documentModel -> {
+                    final String prepared = filter.matcher(documentModel.getDescription().toLowerCase(Locale.US))
+                            .replaceAll(" ");
+                    return includePattern.matcher(prepared).matches() && !excludePattern.matcher(prepared).matches();
+                })
+                .map(DocumentModel::getId)
+                .collect(Collectors.toSet());
+        assertThat(actual, equalTo(expected));
+    }
+
     //todo custom query
     //todo custom weight
     //todo custom scorer
