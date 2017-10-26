@@ -6,7 +6,10 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexableField;
 
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -44,5 +47,49 @@ public enum DocumentUtils {
                 .filter(documentFilter::apply)
                 .filter(doc -> doc.getField(fieldName) != null)
                 .collect(Collectors.toMap(doc -> getFieldValue(doc, fieldName), Function.identity()));
+    }
+
+    public static boolean areEqual(final Document first, final Document second) {
+        final List<IndexableField> firstFields = first.getFields();
+        final List<IndexableField> secondFields = second.getFields();
+
+        if (firstFields.size() != secondFields.size()) {
+            return false;
+        }
+
+        final Iterator<IndexableField> firstIt = firstFields.iterator();
+        final Iterator<IndexableField> secondIt = secondFields.iterator();
+
+        while (firstIt.hasNext() && secondIt.hasNext()) {
+            final IndexableField firstField = firstIt.next();
+            final IndexableField secondField = secondIt.next();
+
+            if (!Objects.equals(firstField.name(), secondField.name())
+                    || !Objects.equals(firstField.stringValue(), secondField.stringValue())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static boolean areEqual(final Collection<Document> first, final Collection<Document> second) {
+        if (first.size() != second.size()) {
+            return false;
+        }
+
+        final Iterator<Document> firstIt = first.iterator();
+        final Iterator<Document> secondIt = second.iterator();
+
+        while (firstIt.hasNext() && secondIt.hasNext()) {
+            final Document firstDoc = firstIt.next();
+            final Document secondDoc = secondIt.next();
+
+            if (!areEqual(firstDoc, secondDoc)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

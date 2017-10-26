@@ -29,18 +29,23 @@ import org.junit.Test;
 import org.trofiv.labs.search.document.DocumentModel;
 import org.trofiv.labs.search.document.PriceInfoModel;
 import org.trofiv.labs.search.document.SKUModel;
+import org.trofiv.labs.search.search.EvenQuery;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.trofiv.labs.search.util.DocumentUtils.areEqual;
 import static org.trofiv.labs.search.util.DocumentUtils.toDocumentIds;
 
 public class SimpleQueryTest extends BaseSearchTest {
@@ -271,9 +276,19 @@ public class SimpleQueryTest extends BaseSearchTest {
         assertThat(actual, equalTo(expected));
     }
 
-    //todo custom query
-    //todo custom weight
-    //todo custom scorer
+    @Test
+    public void customQueryTest() {
+        final Query query = new EvenQuery();
+        final List<Document> actual = indexSearcher.search(query);
+        final List<Document> all = indexSearcher.search(new MatchAllDocsQuery());
+        final Iterator<Boolean> matcher =
+                IntStream.iterate(0, i -> (i + 1) % 2)
+                        .mapToObj(i -> i != 0)
+                        .iterator();
+        final List<Document> expected = all.stream().filter(i -> matcher.next()).collect(Collectors.toList());
+        assertTrue(areEqual(actual, expected));
+    }
+
     //todo custom similarity
 
     @Test
