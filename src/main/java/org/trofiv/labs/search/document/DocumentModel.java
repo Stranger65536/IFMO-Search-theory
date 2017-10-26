@@ -3,8 +3,6 @@ package org.trofiv.labs.search.document;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Value;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.DoubleDocValuesField;
-import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.FloatPoint;
 import org.apache.lucene.document.StringField;
@@ -39,7 +37,7 @@ public class DocumentModel {
         final Document rootDocument = new Document();
         rootDocument.add(new StringField("id", id, Store.YES));
         rootDocument.add(new StringField("scope", "product", Store.NO));
-        rootDocument.add(new StringField("brand", brand, Store.NO));
+        rootDocument.add(new TextField("brand", brand, Store.NO));
         rootDocument.add(new TextField("description", description, Store.NO));
         rootDocument.add(new StringField("gender", gender, Store.NO));
         rootDocument.add(new TextField("name", name, Store.NO));

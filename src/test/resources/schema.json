@@ -5,7 +5,7 @@
     name: '{{firstName()}}',
     gender: '{{gender()}}',
     brand: '{{random("HUGO BOSS", "Diesel", "Lacoste", "Adidas", "Reebok", "Puma", "Nike")}}',
-    description: '{{lorem(1, "paragraphs")}}',
+    description: '{{lorem()}}',
     sku: [
       '{{repeat(1, 10)}}',
       {
