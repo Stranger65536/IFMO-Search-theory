@@ -25,15 +25,18 @@ import org.apache.lucene.search.spans.SpanOrQuery;
 import org.apache.lucene.search.spans.SpanPositionRangeQuery;
 import org.apache.lucene.search.spans.SpanQuery;
 import org.apache.lucene.search.spans.SpanTermQuery;
+import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 import org.trofiv.labs.search.document.DocumentModel;
 import org.trofiv.labs.search.document.PriceInfoModel;
 import org.trofiv.labs.search.document.SKUModel;
-import org.trofiv.labs.search.search.EvenQuery;
+import org.trofiv.labs.search.search.even.EvenQuery;
+import org.trofiv.labs.search.search.random.RandomizedScoreQuery;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -41,8 +44,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.trofiv.labs.search.util.DocumentUtils.areEqual;
@@ -429,5 +436,12 @@ public class SimpleQueryTest extends BaseSearchTest {
                                 .anyMatch(price -> price >= 100.0f && price <= 200.0f)))
                 .map(DocumentModel::getId).collect(Collectors.toSet());
         assertThat(actual, equalTo(expected));
+    }
+
+    @Test
+    @SuppressWarnings("MagicNumber")
+    public void testCustomSimilarityScores() {
+        final Map<Document, Float> result = indexSearcher.scoredSearch(new RandomizedScoreQuery());
+        result.forEach((k, v) -> MatcherAssert.assertThat(v, is(both(greaterThanOrEqualTo(0.0f)).and(lessThan(100.0f)))));
     }
 }

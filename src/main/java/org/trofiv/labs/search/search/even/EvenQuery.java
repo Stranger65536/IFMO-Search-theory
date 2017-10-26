@@ -1,4 +1,4 @@
-package org.trofiv.labs.search.search;
+package org.trofiv.labs.search.search.even;
 
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.IndexSearcher;

@@ -1,11 +1,13 @@
 package org.trofiv.labs.search.index;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class IndexSearcher {
@@ -40,5 +43,29 @@ public class IndexSearcher {
                 throw new IllegalStateException("Can't extract document by id: " + i.doc, e);
             }
         }).collect(Collectors.toList());
+    }
+
+    public Map<Document, Float> scoredSearch(final Query query) {
+        final TopDocs topDocs;
+        try {
+            topDocs = indexSearcher.search(query, size);
+        } catch (IOException e) {
+            throw new IllegalStateException("Can't perform index search!", e);
+        }
+        return Arrays.stream(topDocs.scoreDocs).map(i -> {
+            try {
+                return Pair.of(indexSearcher.doc(i.doc), i.score);
+            } catch (IOException e) {
+                throw new IllegalStateException("Can't extract document by id: " + i.doc, e);
+            }
+        }).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+    }
+
+    public Similarity getSimilarity(final boolean scoresRequired) {
+        return indexSearcher.getSimilarity(scoresRequired);
+    }
+
+    public void setSimilarity(final Similarity similarity) {
+        indexSearcher.setSimilarity(similarity);
     }
 }
