@@ -31,7 +31,9 @@ import org.trofiv.labs.search.document.DocumentModel;
 import org.trofiv.labs.search.document.PriceInfoModel;
 import org.trofiv.labs.search.document.SKUModel;
 import org.trofiv.labs.search.search.even.EvenQuery;
+import org.trofiv.labs.search.search.random.RandomizedCustomScoreQuery;
 import org.trofiv.labs.search.search.random.RandomizedScoreQuery;
+import org.trofiv.labs.search.search.random.RandomizedSimilarity;
 
 import java.util.Iterator;
 import java.util.List;
@@ -296,8 +298,6 @@ public class SimpleQueryTest extends BaseSearchTest {
         assertTrue(areEqual(actual, expected));
     }
 
-    //todo custom similarity
-
     @Test
     public void testQueryXLSkus() {
         final Query query = new TermQuery(new Term("size", "XL"));
@@ -442,6 +442,18 @@ public class SimpleQueryTest extends BaseSearchTest {
     @SuppressWarnings("MagicNumber")
     public void testCustomSimilarityScores() {
         final Map<Document, Float> result = indexSearcher.scoredSearch(new RandomizedScoreQuery());
-        result.forEach((k, v) -> MatcherAssert.assertThat(v, is(both(greaterThanOrEqualTo(0.0f)).and(lessThan(100.0f)))));
+        result.forEach((k, v) -> MatcherAssert.assertThat(v,
+                is(both(greaterThanOrEqualTo(RandomizedSimilarity.LOWER_BOUND))
+                        .and(lessThan(RandomizedSimilarity.UPPER_BOUND)))));
+    }
+
+    @Test
+    @SuppressWarnings("MagicNumber")
+    public void customScoreQueryTest() {
+        final Map<Document, Float> result = indexSearcher.scoredSearch(
+                new RandomizedCustomScoreQuery(new MatchAllDocsQuery()));
+        result.forEach((k, v) -> MatcherAssert.assertThat(v,
+                is(both(greaterThanOrEqualTo(RandomizedCustomScoreQuery.LOWER_BOUND))
+                        .and(lessThan(RandomizedCustomScoreQuery.UPPER_BOUND)))));
     }
 }

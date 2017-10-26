@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.util.Random;
 
 public class RandomizedSimilarity extends Similarity {
+    public static final float LOWER_BOUND = 0.0f;
+    public static final float UPPER_BOUND = 100.0f;
     private static final Random RANDOM = new Random(172488);
     private final SimScorer simScorer;
     private final SimWeight simWeight;
@@ -49,7 +51,7 @@ public class RandomizedSimilarity extends Similarity {
     private static class RandomizedSimScorer extends SimScorer {
         @Override
         public float score(final int doc, final float freq) {
-            return RANDOM.nextFloat() * 100;
+            return RANDOM.nextFloat() * UPPER_BOUND;
         }
 
         @Override
